@@ -17,7 +17,10 @@ export interface Match {
   id: string;
 
   playerAId: string;
+  playerAName: string;
+
   playerBId: string;
+  playerBName: string;
 
   scoreA: number;
   scoreB: number;

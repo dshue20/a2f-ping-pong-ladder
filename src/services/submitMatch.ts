@@ -73,14 +73,14 @@ export async function submitMatch({
           playerB.rating,
           scoreA,
           scoreB,
-          targetScore
+          targetScore,
         )
       : calculateEloMargin(
           playerB.rating,
           playerA.rating,
           scoreB,
           scoreA,
-          targetScore
+          targetScore,
         );
 
   // Map back to players
@@ -114,14 +114,22 @@ export async function submitMatch({
   const matchRef = doc(collection(db, "matches"));
   const matchData: Match = {
     id: matchRef.id,
+
     playerAId,
+    playerAName: playerA.name,
+
     playerBId,
+    playerBName: playerB.name,
+
     scoreA,
     scoreB,
+
     winnerId,
     loserId,
+
     ratingChangeA: newRatingA - playerA.rating,
     ratingChangeB: newRatingB - playerB.rating,
+
     createdAt: Timestamp.now(),
   };
 
