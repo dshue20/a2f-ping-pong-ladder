@@ -37,11 +37,14 @@ export default function PlayerSelect({
     const name = newName.trim();
     if (!name) return;
 
+    const initialRating = 1000;
+
     const docRef = await addDoc(collection(db, "players"), {
       name,
       wins: 0,
       losses: 0,
-      rating: 1000,
+      rating: initialRating,
+      startingRating: initialRating,
       streak: "",
       createdAt: serverTimestamp(),
     });
@@ -51,7 +54,8 @@ export default function PlayerSelect({
       name,
       wins: 0,
       losses: 0,
-      rating: 1000,
+      rating: initialRating,
+      startingRating: initialRating,
       streak: "",
       gamesPlayed: 0,
     };

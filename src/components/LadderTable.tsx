@@ -68,16 +68,21 @@ export default function LadderTableMUI() {
       },
     },
     {
-      field: "ratingPerGame",
-      headerName: "Rating / Game",
-      flex: 1.2,
+      field: "ratingPointsWonPerGame",
+      headerName: "Rating Pts Won / Game",
+      flex: 1.5,
       align: "center",
       headerAlign: "center",
       valueGetter: (_, row) => {
         const wins = row.wins ?? 0;
         const losses = row.losses ?? 0;
         const games = wins + losses;
-        return games === 0 ? "0" : (row.rating / games).toFixed(0);
+        // Use startingRating if available, otherwise fallback to 1000 for new players
+        // or current rating for legacy players (this assumes they haven't gained/lost points yet)
+        const startRating =
+          (row as Player & { startingRating?: number }).startingRating ?? 1000;
+        const pointsWon = row.rating - startRating;
+        return games === 0 ? "0.0" : (pointsWon / games).toFixed(1);
       },
     },
     {
@@ -86,7 +91,17 @@ export default function LadderTableMUI() {
       flex: 1,
       align: "center",
       headerAlign: "center",
-      valueGetter: (_, row) => row.streak || "-",
+      renderCell: (params) => {
+        const streak = params.row.streak || "-";
+        if (streak === "-" || streak === "") {
+          return <Box>-</Box>;
+        }
+
+        const isWinStreak = streak.startsWith("W");
+        const color = isWinStreak ? "success.main" : "error.main";
+
+        return <Box sx={{ color, fontWeight: 600 }}>{streak}</Box>;
+      },
     },
   ];
 

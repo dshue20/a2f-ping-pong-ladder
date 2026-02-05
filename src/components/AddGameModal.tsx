@@ -16,11 +16,17 @@ type Props = {
   onClose: () => void;
   players: Player[];
   onSubmit: (
-    winnerId: string,
-    loserId: string,
-    winningScore: number,
-    losingScore: number,
+    playerAId: string,
+    playerBId: string,
+    scoreA: number,
+    scoreB: number,
   ) => void;
+  // Optional props for edit mode
+  editMode?: boolean;
+  initialPlayerAId?: string;
+  initialPlayerBId?: string;
+  initialScoreA?: number | "";
+  initialScoreB?: number | "";
 };
 
 export default function AddGameModal({
@@ -28,17 +34,32 @@ export default function AddGameModal({
   onClose,
   players: initialPlayers,
   onSubmit,
+  editMode = false,
+  initialPlayerAId = "",
+  initialPlayerBId = "",
+  initialScoreA = "",
+  initialScoreB = "",
 }: Props) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
-  const [playerAId, setPlayerAId] = useState("");
-  const [playerBId, setPlayerBId] = useState("");
-  const [scoreA, setScoreA] = useState<number | "">("");
-  const [scoreB, setScoreB] = useState<number | "">("");
+  const [playerAId, setPlayerAId] = useState(initialPlayerAId);
+  const [playerBId, setPlayerBId] = useState(initialPlayerBId);
+  const [scoreA, setScoreA] = useState<number | "">(initialScoreA);
+  const [scoreB, setScoreB] = useState<number | "">(initialScoreB);
 
   // Keep players in sync when parent updates initialPlayers
   useEffect(() => {
     setPlayers(initialPlayers);
   }, [initialPlayers]);
+
+  // Update state when initial values change (for edit mode)
+  useEffect(() => {
+    if (open) {
+      setPlayerAId(initialPlayerAId);
+      setPlayerBId(initialPlayerBId);
+      setScoreA(initialScoreA);
+      setScoreB(initialScoreB);
+    }
+  }, [open, initialPlayerAId, initialPlayerBId, initialScoreA, initialScoreB]);
 
   const canSubmit =
     playerAId &&
@@ -53,52 +74,66 @@ export default function AddGameModal({
     onSubmit(playerAId, playerBId, Number(scoreA), Number(scoreB));
     onClose();
 
-    setPlayerAId("");
-    setPlayerBId("");
-    setScoreA("");
-    setScoreB("");
+    // Only reset if not in edit mode
+    if (!editMode) {
+      setPlayerAId("");
+      setPlayerBId("");
+      setScoreA("");
+      setScoreB("");
+    }
+  };
+
+  const handleClose = () => {
+    onClose();
+    // Only reset if not in edit mode
+    if (!editMode) {
+      setPlayerAId("");
+      setPlayerBId("");
+      setScoreA("");
+      setScoreB("");
+    }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Add Game</DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle>{editMode ? "Edit Game" : "Add Game"}</DialogTitle>
 
       <DialogContent>
         <Stack spacing={2} mt={1}>
           <PlayerSelect
-            label="Winner"
+            label="Player A"
             players={players}
             value={playerAId}
             excludeId={playerBId}
             onChange={setPlayerAId}
             onPlayerAdded={(newPlayer) => {
-              setPlayers((prev) => [...prev, newPlayer]); // add to dropdown
-              setPlayerAId(newPlayer.id); // select immediately
+              setPlayers((prev) => [...prev, newPlayer]);
+              setPlayerAId(newPlayer.id);
             }}
           />
 
           <PlayerSelect
-            label="Loser"
+            label="Player B"
             players={players}
             value={playerBId}
             excludeId={playerAId}
-            onChange={setPlayerBId} // ✅ FIXED
+            onChange={setPlayerBId}
             onPlayerAdded={(newPlayer) => {
-              setPlayers((prev) => [...prev, newPlayer]); // add to dropdown
-              setPlayerAId(newPlayer.id); // select immediately
+              setPlayers((prev) => [...prev, newPlayer]);
+              setPlayerBId(newPlayer.id);
             }}
           />
 
           <Stack direction="row" spacing={2}>
             <TextField
-              label="Winning Score"
+              label="Player A Score"
               type="number"
               value={scoreA}
               onChange={(e) => setScoreA(Number(e.target.value))}
               fullWidth
             />
             <TextField
-              label="Losing Score"
+              label="Player B Score"
               type="number"
               value={scoreB}
               onChange={(e) => setScoreB(Number(e.target.value))}
@@ -109,13 +144,13 @@ export default function AddGameModal({
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleClose}>Cancel</Button>
         <Button
           variant="contained"
           onClick={handleSubmit}
           disabled={!canSubmit}
         >
-          Submit Game
+          {editMode ? "Update Game" : "Submit Game"}
         </Button>
       </DialogActions>
     </Dialog>

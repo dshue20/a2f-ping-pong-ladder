@@ -6,9 +6,19 @@ import LadderTable from "./components/LadderTable";
 import MatchHistory from "./components/MatchHistory";
 // import PlayerProfile from "./components/PlayerProfile";
 
+import { useEffect } from "react";
+import { migratePlayersWithKnownStartingRatings } from "./migrations/addStartingRating";
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Inside your App component, add:
+  useEffect(() => {
+    // @ts-ignore - temporary for migration
+    window.runMigration = migratePlayersWithKnownStartingRatings;
+    console.log("Migration function ready! Run: await window.runMigration()");
+  }, []);
 
   // Determine which tab is active based on URL
   const currentTab = (() => {

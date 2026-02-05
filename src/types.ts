@@ -8,6 +8,8 @@ export interface Player {
   losses: number;
 
   rating: number;
+  startingRating?: number;
+
   streak: string;
 
   gamesPlayed: number;
