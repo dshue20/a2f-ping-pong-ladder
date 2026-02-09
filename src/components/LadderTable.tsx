@@ -1,8 +1,8 @@
-// src/components/LadderTableMUI.tsx
 import { Box, Button, Paper, Stack, Typography } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { submitMatch } from "../services/submitMatch";
 import type { Player } from "../types";
@@ -13,6 +13,7 @@ type Row = Player & {
 };
 
 export default function LadderTableMUI() {
+  const navigate = useNavigate();
   const [players, setPlayers] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [addGameOpen, setAddGameOpen] = useState(false);
@@ -31,6 +32,21 @@ export default function LadderTableMUI() {
       flex: 2,
       align: "center",
       headerAlign: "center",
+      renderCell: (params) => (
+        <Box
+          onClick={() => navigate(`/players/${params.row.id}`)}
+          sx={{
+            cursor: "pointer",
+            color: "primary.main",
+            fontWeight: 500,
+            "&:hover": {
+              textDecoration: "underline",
+            },
+          }}
+        >
+          {params.row.name}
+        </Box>
+      ),
     },
     {
       field: "rating",
@@ -132,11 +148,10 @@ export default function LadderTableMUI() {
   return (
     <Box
       sx={{
-        height: "100vh",
-        width: "100vw",
-        bgcolor: "grey.100",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
+        p: 2,
       }}
     >
       {/* Header */}
@@ -147,6 +162,7 @@ export default function LadderTableMUI() {
           borderBottom: "1px solid",
           borderColor: "divider",
           bgcolor: "background.paper",
+          borderRadius: "12px 12px 0 0",
         }}
       >
         <Stack
@@ -169,43 +185,44 @@ export default function LadderTableMUI() {
       </Box>
 
       {/* Table */}
-      <Box sx={{ flex: 1, p: 2 }}>
-        <Paper
-          elevation={3}
-          sx={{
-            height: "100%",
-            borderRadius: 3,
-            overflow: "hidden",
+      <Paper
+        elevation={3}
+        sx={{
+          flex: 1,
+          borderRadius: "0 0 12px 12px",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <DataGrid<Row>
+          rows={players}
+          columns={columns}
+          loading={loading}
+          disableRowSelectionOnClick
+          pageSizeOptions={[10, 25, 50]}
+          initialState={{
+            pagination: { paginationModel: { pageSize: 25, page: 0 } },
           }}
-        >
-          <DataGrid<Row>
-            rows={players}
-            columns={columns}
-            loading={loading}
-            disableRowSelectionOnClick
-            pageSizeOptions={[10, 25, 50]}
-            initialState={{
-              pagination: { paginationModel: { pageSize: 25, page: 0 } },
-            }}
-            sx={{
-              border: "none",
-              "& .MuiDataGrid-cell": {
-                fontSize: "1rem",
-                justifyContent: "center",
-              },
-              "& .MuiDataGrid-columnHeaders": { backgroundColor: "grey.200" },
-              "& .MuiDataGrid-columnHeaderTitle": {
-                fontWeight: 700,
-                fontSize: "1.05rem",
-                textAlign: "center",
-              },
-              "& .MuiDataGrid-row:hover": {
-                backgroundColor: "rgba(25, 118, 210, 0.04)",
-              },
-            }}
-          />
-        </Paper>
-      </Box>
+          sx={{
+            border: "none",
+            flex: 1,
+            "& .MuiDataGrid-cell": {
+              fontSize: "1rem",
+              justifyContent: "center",
+            },
+            "& .MuiDataGrid-columnHeaders": { backgroundColor: "grey.200" },
+            "& .MuiDataGrid-columnHeaderTitle": {
+              fontWeight: 700,
+              fontSize: "1.05rem",
+              textAlign: "center",
+            },
+            "& .MuiDataGrid-row:hover": {
+              backgroundColor: "rgba(25, 118, 210, 0.04)",
+            },
+          }}
+        />
+      </Paper>
 
       <AddGameModal
         open={addGameOpen}

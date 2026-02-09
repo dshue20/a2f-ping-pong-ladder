@@ -11,6 +11,7 @@ import {
   IconButton,
   Paper,
   Stack,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -43,13 +44,25 @@ type MatchRow = {
   createdAt: Timestamp;
 };
 
-export default function MatchHistory() {
+type Props = {
+  playerId?: string; // Optional: filter matches for a specific player
+  showTitle?: boolean; // Optional: show/hide the title
+  showSearch?: boolean; // Optional: show/hide search bar
+};
+
+export default function MatchHistory({
+  playerId,
+  showTitle = true,
+  showSearch = true,
+}: Props) {
   const [rows, setRows] = useState<MatchRow[]>([]);
+  const [filteredRows, setFilteredRows] = useState<MatchRow[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [matchToDelete, setMatchToDelete] = useState<MatchRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -64,37 +77,84 @@ export default function MatchHistory() {
       headerAlign: "center",
       valueGetter: (_, row) => row.createdAt?.toDate().toLocaleDateString(),
     },
-    {
-      field: "match",
-      headerName: "Match",
-      flex: 2.5,
-      align: "center",
-      headerAlign: "center",
-      renderCell: (params) => {
-        const row = params.row;
-        const playerAWon = row.scoreA > row.scoreB;
-        const winner = playerAWon ? row.playerAName : row.playerBName;
-        const loser = playerAWon ? row.playerBName : row.playerAName;
-        const winnerChange = playerAWon ? row.ratingChangeA : row.ratingChangeB;
-        const loserChange = playerAWon ? row.ratingChangeB : row.ratingChangeA;
+    ...(playerId
+      ? [
+          // When filtering by player, show opponent instead of full match
+          {
+            field: "opponent" as const,
+            headerName: "Opponent",
+            flex: 2,
+            align: "center" as const,
+            headerAlign: "center" as const,
+            valueGetter: (_: any, row: MatchRow) => {
+              if (row.playerAId === playerId) return row.playerBName;
+              return row.playerAName;
+            },
+          },
+          {
+            field: "result" as const,
+            headerName: "Result",
+            flex: 1,
+            align: "center" as const,
+            headerAlign: "center" as const,
+            renderCell: (params: any) => {
+              const row = params.row as MatchRow;
+              const isPlayerA = row.playerAId === playerId;
+              const won = isPlayerA
+                ? row.scoreA > row.scoreB
+                : row.scoreB > row.scoreA;
+              const color = won ? "success.main" : "error.main";
+              const result = won ? "W" : "L";
 
-        return (
-          <Box>
-            {winner}{" "}
-            <Box
-              component="span"
-              sx={{ color: "success.main", fontWeight: 600 }}
-            >
-              (+{Math.round(winnerChange)})
-            </Box>{" "}
-            def {loser}{" "}
-            <Box component="span" sx={{ color: "error.main", fontWeight: 600 }}>
-              ({Math.round(loserChange)})
-            </Box>
-          </Box>
-        );
-      },
-    },
+              return (
+                <Box sx={{ color, fontWeight: 600, fontSize: "1.1rem" }}>
+                  {result}
+                </Box>
+              );
+            },
+          },
+        ]
+      : [
+          // When showing all matches, show full match details
+          {
+            field: "match" as const,
+            headerName: "Match",
+            flex: 2.5,
+            align: "center" as const,
+            headerAlign: "center" as const,
+            renderCell: (params: any) => {
+              const row = params.row as MatchRow;
+              const playerAWon = row.scoreA > row.scoreB;
+              const winner = playerAWon ? row.playerAName : row.playerBName;
+              const loser = playerAWon ? row.playerBName : row.playerAName;
+              const winnerChange = playerAWon
+                ? row.ratingChangeA
+                : row.ratingChangeB;
+              const loserChange = playerAWon
+                ? row.ratingChangeB
+                : row.ratingChangeA;
+
+              return (
+                <Box>
+                  {winner}{" "}
+                  <Box
+                    component="span"
+                    sx={{ color: "success.main", fontWeight: 600 }}
+                  >
+                    (+{Math.round(winnerChange)})
+                  </Box>{" "}
+                  def {loser}{" "}
+                  <Box
+                    component="span"
+                    sx={{ color: "error.main", fontWeight: 600 }}
+                  >
+                    ({Math.round(loserChange)})
+                  </Box>
+                </Box>
+              );
+            },
+          },
+        ]),
     {
       field: "score",
       headerName: "Score",
@@ -102,11 +162,44 @@ export default function MatchHistory() {
       align: "center",
       headerAlign: "center",
       valueGetter: (_, row) => {
-        const winnerScore = Math.max(row.scoreA, row.scoreB);
-        const loserScore = Math.min(row.scoreA, row.scoreB);
-        return `${winnerScore} — ${loserScore}`;
+        if (playerId) {
+          // Show player's score first when filtering by player
+          const isPlayerA = row.playerAId === playerId;
+          const playerScore = isPlayerA ? row.scoreA : row.scoreB;
+          const opponentScore = isPlayerA ? row.scoreB : row.scoreA;
+          return `${playerScore} — ${opponentScore}`;
+        } else {
+          // Show winner's score first when showing all matches
+          const winnerScore = Math.max(row.scoreA, row.scoreB);
+          const loserScore = Math.min(row.scoreA, row.scoreB);
+          return `${winnerScore} — ${loserScore}`;
+        }
       },
     },
+    ...(playerId
+      ? [
+          {
+            field: "ratingChange" as const,
+            headerName: "Rating Change",
+            flex: 1,
+            align: "center" as const,
+            headerAlign: "center" as const,
+            renderCell: (params: any) => {
+              const row = params.row as MatchRow;
+              const isPlayerA = row.playerAId === playerId;
+              const change = isPlayerA ? row.ratingChangeA : row.ratingChangeB;
+              const color = change >= 0 ? "success.main" : "error.main";
+
+              return (
+                <Box sx={{ color, fontWeight: 600 }}>
+                  {change >= 0 ? "+" : ""}
+                  {Math.round(change)}
+                </Box>
+              );
+            },
+          },
+        ]
+      : []),
     {
       field: "actions",
       headerName: "Actions",
@@ -156,7 +249,16 @@ export default function MatchHistory() {
       ...(doc.data() as Omit<MatchRow, "id">),
     }));
 
-    setRows(data);
+    // Filter by player if playerId is provided
+    const filtered = playerId
+      ? data.filter(
+          (match) =>
+            match.playerAId === playerId || match.playerBId === playerId,
+        )
+      : data;
+
+    setRows(filtered);
+    setFilteredRows(filtered);
     setLoading(false);
   }
 
@@ -171,6 +273,24 @@ export default function MatchHistory() {
 
     setPlayers(data);
   }
+
+  // Filter matches based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredRows(rows);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = rows.filter((match) => {
+      // Search in player names
+      const playerAMatch = match.playerAName.toLowerCase().includes(query);
+      const playerBMatch = match.playerBName.toLowerCase().includes(query);
+      return playerAMatch || playerBMatch;
+    });
+
+    setFilteredRows(filtered);
+  }, [searchQuery, rows]);
 
   const handleEditClick = (match: MatchRow) => {
     setMatchToEdit(match);
@@ -226,7 +346,7 @@ export default function MatchHistory() {
   useEffect(() => {
     fetchMatches();
     fetchPlayers();
-  }, []);
+  }, [playerId]);
 
   const getMatchDescription = () => {
     if (!matchToDelete) return "";
@@ -256,25 +376,51 @@ export default function MatchHistory() {
           height: "100%",
           borderRadius: 3,
           overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <Box sx={{ p: 2 }}>
-          <Typography variant="h5" fontWeight={600}>
-            📜 Match History
-          </Typography>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            {showTitle && (
+              <Typography variant="h5" fontWeight={600}>
+                📜 Match History
+                {playerId && ` (${filteredRows.length})`}
+              </Typography>
+            )}
+            {!showTitle && <Box />}
+            {showSearch && (
+              <TextField
+                placeholder={
+                  playerId ? "Search by opponent..." : "Search by player..."
+                }
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                size="small"
+                sx={{ width: 250 }}
+              />
+            )}
+          </Stack>
         </Box>
 
         <DataGrid<MatchRow>
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           loading={loading}
           disableRowSelectionOnClick
           pageSizeOptions={[10, 25, 50]}
           initialState={{
-            pagination: { paginationModel: { pageSize: 25, page: 0 } },
+            pagination: {
+              paginationModel: { pageSize: playerId ? 10 : 25, page: 0 },
+            },
           }}
           sx={{
             border: "none",
+            flex: 1,
             "& .MuiDataGrid-cell": {
               fontSize: "0.95rem",
               justifyContent: "center",

@@ -4,7 +4,7 @@ import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import LadderTable from "./components/LadderTable";
 import MatchHistory from "./components/MatchHistory";
-// import PlayerProfile from "./components/PlayerProfile";
+import PlayerProfile from "./components/PlayerProfile";
 
 import { useEffect } from "react";
 import { migratePlayersWithKnownStartingRatings } from "./migrations/addStartingRating";
@@ -45,7 +45,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LadderTable />} />
           <Route path="/matches" element={<MatchHistory />} />
-          {/* <Route path="/players/:playerId" element={<PlayerProfile />} /> */}
+          <Route path="/players/:playerId" element={<PlayerProfile />} />
         </Routes>
       </Box>
     </Box>
