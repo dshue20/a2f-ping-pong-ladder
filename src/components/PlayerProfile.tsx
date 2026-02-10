@@ -174,7 +174,13 @@ export default function PlayerProfile() {
 
   return (
     <Box
-      sx={{ height: "100%", display: "flex", flexDirection: "column", p: 2 }}
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        p: 2,
+        overflow: "auto", // Enable scrolling at the page level
+      }}
     >
       {/* Header */}
       <Box sx={{ mb: 2 }}>
@@ -336,9 +342,9 @@ export default function PlayerProfile() {
         )}
       </Paper>
 
-      {/* Match History - Now using reusable component */}
-      <Box sx={{ flex: 1, overflow: "hidden" }}>
-        <MatchHistory playerId={playerId} showTitle={false} />
+      {/* Match History - Now using reusable component with autoHeight */}
+      <Box sx={{ mb: 2 }}>
+        <MatchHistory playerId={playerId} showTitle={false} autoHeight />
       </Box>
     </Box>
   );

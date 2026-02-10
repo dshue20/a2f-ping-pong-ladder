@@ -11,7 +11,6 @@ import {
   IconButton,
   Paper,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -24,11 +23,13 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { deleteMatch } from "../services/deleteMatch";
 import { editMatch } from "../services/editMatch";
 import type { Player } from "../types";
 import AddGameModal from "./AddGameModal";
+import PlayerSelect from "./PlayerSelect";
 
 type MatchRow = {
   id: string;
@@ -48,13 +49,16 @@ type Props = {
   playerId?: string; // Optional: filter matches for a specific player
   showTitle?: boolean; // Optional: show/hide the title
   showSearch?: boolean; // Optional: show/hide search bar
+  autoHeight?: boolean; // Optional: allow table to grow with content instead of fixed height
 };
 
 export default function MatchHistory({
   playerId,
   showTitle = true,
   showSearch = true,
+  autoHeight = false,
 }: Props) {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [filteredRows, setFilteredRows] = useState<MatchRow[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -62,7 +66,7 @@ export default function MatchHistory({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [matchToDelete, setMatchToDelete] = useState<MatchRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
 
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -86,9 +90,31 @@ export default function MatchHistory({
             flex: 2,
             align: "center" as const,
             headerAlign: "center" as const,
-            valueGetter: (_: any, row: MatchRow) => {
-              if (row.playerAId === playerId) return row.playerBName;
-              return row.playerAName;
+            renderCell: (params: any) => {
+              const row = params.row as MatchRow;
+              const opponentId =
+                row.playerAId === playerId ? row.playerBId : row.playerAId;
+              const opponentName =
+                row.playerAId === playerId ? row.playerBName : row.playerAName;
+
+              return (
+                <Box
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/players/${opponentId}`);
+                  }}
+                  sx={{
+                    cursor: "pointer",
+                    color: "primary.main",
+                    fontWeight: 500,
+                    "&:hover": {
+                      textDecoration: "underline",
+                    },
+                  }}
+                >
+                  {opponentName}
+                </Box>
+              );
             },
           },
           {
@@ -125,6 +151,8 @@ export default function MatchHistory({
             renderCell: (params: any) => {
               const row = params.row as MatchRow;
               const playerAWon = row.scoreA > row.scoreB;
+              const winnerId = playerAWon ? row.playerAId : row.playerBId;
+              const loserId = playerAWon ? row.playerBId : row.playerAId;
               const winner = playerAWon ? row.playerAName : row.playerBName;
               const loser = playerAWon ? row.playerBName : row.playerAName;
               const winnerChange = playerAWon
@@ -136,14 +164,47 @@ export default function MatchHistory({
 
               return (
                 <Box>
-                  {winner}{" "}
+                  <Box
+                    component="span"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/players/${winnerId}`);
+                    }}
+                    sx={{
+                      cursor: "pointer",
+                      color: "primary.main",
+                      fontWeight: 500,
+                      "&:hover": {
+                        textDecoration: "underline",
+                      },
+                    }}
+                  >
+                    {winner}
+                  </Box>{" "}
                   <Box
                     component="span"
                     sx={{ color: "success.main", fontWeight: 600 }}
                   >
                     (+{Math.round(winnerChange)})
                   </Box>{" "}
-                  def {loser}{" "}
+                  def{" "}
+                  <Box
+                    component="span"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/players/${loserId}`);
+                    }}
+                    sx={{
+                      cursor: "pointer",
+                      color: "primary.main",
+                      fontWeight: 500,
+                      "&:hover": {
+                        textDecoration: "underline",
+                      },
+                    }}
+                  >
+                    {loser}
+                  </Box>{" "}
                   <Box
                     component="span"
                     sx={{ color: "error.main", fontWeight: 600 }}
@@ -274,23 +335,23 @@ export default function MatchHistory({
     setPlayers(data);
   }
 
-  // Filter matches based on search query
+  // Filter matches based on selected player
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!selectedPlayerId) {
       setFilteredRows(rows);
       return;
     }
 
-    const query = searchQuery.toLowerCase();
     const filtered = rows.filter((match) => {
-      // Search in player names
-      const playerAMatch = match.playerAName.toLowerCase().includes(query);
-      const playerBMatch = match.playerBName.toLowerCase().includes(query);
-      return playerAMatch || playerBMatch;
+      // Filter by selected player
+      return (
+        match.playerAId === selectedPlayerId ||
+        match.playerBId === selectedPlayerId
+      );
     });
 
     setFilteredRows(filtered);
-  }, [searchQuery, rows]);
+  }, [selectedPlayerId, rows]);
 
   const handleEditClick = (match: MatchRow) => {
     setMatchToEdit(match);
@@ -369,11 +430,11 @@ export default function MatchHistory({
   };
 
   return (
-    <Box sx={{ p: 2, height: "100%" }}>
+    <Box sx={{ p: 2, height: autoHeight ? "auto" : "100%" }}>
       <Paper
         elevation={3}
         sx={{
-          height: "100%",
+          height: autoHeight ? "auto" : "100%",
           borderRadius: 3,
           overflow: "hidden",
           display: "flex",
@@ -394,15 +455,16 @@ export default function MatchHistory({
             )}
             {!showTitle && <Box />}
             {showSearch && (
-              <TextField
-                placeholder={
-                  playerId ? "Search by opponent..." : "Search by player..."
-                }
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                size="small"
-                sx={{ width: 250 }}
-              />
+              <Box sx={{ width: 250 }}>
+                <PlayerSelect
+                  label={playerId ? "Filter by opponent" : "Filter by player"}
+                  players={players}
+                  value={selectedPlayerId}
+                  onChange={setSelectedPlayerId}
+                  onPlayerAdded={() => {}} // Not used since addNewPlayer is false
+                  addNewPlayer={false}
+                />
+              </Box>
             )}
           </Stack>
         </Box>
@@ -418,9 +480,10 @@ export default function MatchHistory({
               paginationModel: { pageSize: playerId ? 10 : 25, page: 0 },
             },
           }}
+          autoHeight={autoHeight}
           sx={{
             border: "none",
-            flex: 1,
+            flex: autoHeight ? undefined : 1,
             "& .MuiDataGrid-cell": {
               fontSize: "0.95rem",
               justifyContent: "center",

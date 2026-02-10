@@ -4,15 +4,21 @@ import { useState } from "react";
 import { db } from "../firebase";
 import type { Player } from "../types";
 
-type PlayerOption = Player | { id: "__add__"; name: string };
+type AddOption = {
+  id: "__add__";
+  name: string;
+};
+
+type PlayerOption = Player | AddOption;
 
 type Props = {
   label: string;
   players: Player[];
   value: string;
   onChange: (playerId: string) => void;
-  onPlayerAdded: (player: Player) => void; // 👈 NEW
+  onPlayerAdded: (player: Player) => void;
   excludeId?: string;
+  addNewPlayer?: boolean; // Optional: show/hide "Add new player" option
 };
 
 export default function PlayerSelect({
@@ -22,12 +28,18 @@ export default function PlayerSelect({
   onChange,
   onPlayerAdded,
   excludeId,
+  addNewPlayer = true,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
 
+  const addOption: AddOption = {
+    id: "__add__",
+    name: "➕ Add new player",
+  };
+
   const options: PlayerOption[] = [
-    { id: "__add__", name: "➕ Add new player" },
+    ...(addNewPlayer ? [addOption] : []),
     ...players
       .filter((p) => p.id !== excludeId)
       .sort((a, b) => a.name.localeCompare(b.name)),
@@ -91,7 +103,10 @@ export default function PlayerSelect({
       getOptionLabel={(option) => option.name}
       value={options.find((o) => o.id === value) ?? null}
       onChange={(_, option) => {
-        if (!option) return;
+        if (!option) {
+          onChange("");
+          return;
+        }
 
         if (option.id === "__add__") {
           setAdding(true);

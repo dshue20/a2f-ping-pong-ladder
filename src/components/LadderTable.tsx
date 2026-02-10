@@ -83,24 +83,24 @@ export default function LadderTableMUI() {
         return games === 0 ? "0%" : `${((wins / games) * 100).toFixed(0)}%`;
       },
     },
-    {
-      field: "ratingPointsWonPerGame",
-      headerName: "Rating Pts Won / Game",
-      flex: 1.5,
-      align: "center",
-      headerAlign: "center",
-      valueGetter: (_, row) => {
-        const wins = row.wins ?? 0;
-        const losses = row.losses ?? 0;
-        const games = wins + losses;
-        // Use startingRating if available, otherwise fallback to 1000 for new players
-        // or current rating for legacy players (this assumes they haven't gained/lost points yet)
-        const startRating =
-          (row as Player & { startingRating?: number }).startingRating ?? 1000;
-        const pointsWon = row.rating - startRating;
-        return games === 0 ? "0.0" : (pointsWon / games).toFixed(1);
-      },
-    },
+    // {
+    //   field: "ratingPointsWonPerGame",
+    //   headerName: "Rating Pts Won / Game",
+    //   flex: 1.5,
+    //   align: "center",
+    //   headerAlign: "center",
+    //   valueGetter: (_, row) => {
+    //     const wins = row.wins ?? 0;
+    //     const losses = row.losses ?? 0;
+    //     const games = wins + losses;
+    //     // Use startingRating if available, otherwise fallback to 1000 for new players
+    //     // or current rating for legacy players (this assumes they haven't gained/lost points yet)
+    //     const startRating =
+    //       (row as Player & { startingRating?: number }).startingRating ?? 1000;
+    //     const pointsWon = row.rating - startRating;
+    //     return games === 0 ? "0.0" : (pointsWon / games).toFixed(1);
+    //   },
+    // },
     {
       field: "streak",
       headerName: "Streak",
