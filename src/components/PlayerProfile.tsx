@@ -55,6 +55,12 @@ export default function PlayerProfile() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [ratingHistory, setRatingHistory] = useState<RatingDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOpponentId, setSelectedOpponentId] = useState("");
+  const [selectedOpponentName, setSelectedOpponentName] = useState("");
+  const [headToHeadRecord, setHeadToHeadRecord] = useState({
+    wins: 0,
+    losses: 0,
+  });
 
   async function fetchPlayerData() {
     if (!playerId) return;
@@ -141,6 +147,54 @@ export default function PlayerProfile() {
 
     setLoading(false);
   }
+
+  // Calculate head-to-head record when opponent is selected
+  useEffect(() => {
+    if (!selectedOpponentId || !playerId) {
+      setHeadToHeadRecord({ wins: 0, losses: 0 });
+      return;
+    }
+
+    async function calculateHeadToHead() {
+      const matchesRef = collection(db, "matches");
+      const q = query(matchesRef);
+      const snapshot = await getDocs(q);
+
+      const allMatches: MatchRow[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<MatchRow, "id">),
+      }));
+
+      // Filter for matches between these two players
+      const headToHeadMatches = allMatches.filter(
+        (match) =>
+          (match.playerAId === playerId &&
+            match.playerBId === selectedOpponentId) ||
+          (match.playerBId === playerId &&
+            match.playerAId === selectedOpponentId),
+      );
+
+      let wins = 0;
+      let losses = 0;
+
+      headToHeadMatches.forEach((match) => {
+        const isPlayerA = match.playerAId === playerId;
+        const playerWon = isPlayerA
+          ? match.scoreA > match.scoreB
+          : match.scoreB > match.scoreA;
+
+        if (playerWon) {
+          wins++;
+        } else {
+          losses++;
+        }
+      });
+
+      setHeadToHeadRecord({ wins, losses });
+    }
+
+    calculateHeadToHead();
+  }, [selectedOpponentId, playerId]);
 
   useEffect(() => {
     fetchPlayerData();
@@ -255,7 +309,7 @@ export default function PlayerProfile() {
                 angle={-45}
                 textAnchor="end"
                 height={80}
-                tickFormatter={(value, index) => {
+                tickFormatter={(_, index) => {
                   // Show date labels, but skip some to avoid crowding
                   const dataPoint = ratingHistory[index];
                   if (!dataPoint) return "";
@@ -344,7 +398,28 @@ export default function PlayerProfile() {
 
       {/* Match History - Now using reusable component with autoHeight */}
       <Box sx={{ mb: 2 }}>
-        <MatchHistory playerId={playerId} showTitle={false} autoHeight />
+        <MatchHistory
+          playerId={playerId}
+          showTitle={false}
+          autoHeight
+          onOpponentSelected={(opponentId, opponentName) => {
+            setSelectedOpponentId(opponentId);
+            setSelectedOpponentName(opponentName);
+          }}
+          headToHeadRecord={
+            selectedOpponentId ? (
+              <Typography
+                variant="body1"
+                fontWeight={700}
+                fontSize={24}
+                paddingLeft={2}
+              >
+                Record vs {selectedOpponentName}: {headToHeadRecord.wins}-
+                {headToHeadRecord.losses}
+              </Typography>
+            ) : null
+          }
+        />
       </Box>
     </Box>
   );

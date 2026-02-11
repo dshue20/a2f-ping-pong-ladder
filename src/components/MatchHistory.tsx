@@ -22,7 +22,7 @@ import {
   query,
   Timestamp,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { deleteMatch } from "../services/deleteMatch";
@@ -50,6 +50,8 @@ type Props = {
   showTitle?: boolean; // Optional: show/hide the title
   showSearch?: boolean; // Optional: show/hide search bar
   autoHeight?: boolean; // Optional: allow table to grow with content instead of fixed height
+  onOpponentSelected?: (opponentId: string, opponentName: string) => void; // Callback when opponent is selected
+  headToHeadRecord?: React.ReactNode; // Optional: display head-to-head record
 };
 
 export default function MatchHistory({
@@ -57,11 +59,14 @@ export default function MatchHistory({
   showTitle = true,
   showSearch = true,
   autoHeight = false,
+  onOpponentSelected,
+  headToHeadRecord,
 }: Props) {
   const navigate = useNavigate();
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [filteredRows, setFilteredRows] = useState<MatchRow[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]); // For PlayerSelect dropdown
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [matchToDelete, setMatchToDelete] = useState<MatchRow | null>(null);
@@ -335,6 +340,38 @@ export default function MatchHistory({
     setPlayers(data);
   }
 
+  // Update filtered players based on matches and playerId
+  useEffect(() => {
+    if (playerId) {
+      // When filtering by a specific player, show only opponents who have played against them
+      const opponentIds = new Set<string>();
+      rows.forEach((match) => {
+        if (match.playerAId === playerId) {
+          opponentIds.add(match.playerBId);
+        } else if (match.playerBId === playerId) {
+          opponentIds.add(match.playerAId);
+        }
+      });
+
+      const availablePlayers = players.filter((player) =>
+        opponentIds.has(player.id),
+      );
+      setFilteredPlayers(availablePlayers);
+    } else {
+      // When showing all matches, show only players who have played at least one match
+      const playerIds = new Set<string>();
+      rows.forEach((match) => {
+        playerIds.add(match.playerAId);
+        playerIds.add(match.playerBId);
+      });
+
+      const availablePlayers = players.filter((player) =>
+        playerIds.has(player.id),
+      );
+      setFilteredPlayers(availablePlayers);
+    }
+  }, [rows, players, playerId]);
+
   // Filter matches based on selected player
   useEffect(() => {
     if (!selectedPlayerId) {
@@ -447,20 +484,36 @@ export default function MatchHistory({
             justifyContent="space-between"
             alignItems="center"
           >
-            {showTitle && (
-              <Typography variant="h5" fontWeight={600}>
-                📜 Match History
-                {playerId && ` (${filteredRows.length})`}
-              </Typography>
-            )}
-            {!showTitle && <Box />}
+            <Stack direction="row" spacing={2} alignItems="center">
+              {showTitle && (
+                <Typography variant="h5" fontWeight={600}>
+                  📜 Match History
+                  {playerId && ` (${filteredRows.length})`}
+                </Typography>
+              )}
+              {headToHeadRecord && headToHeadRecord}
+            </Stack>
             {showSearch && (
               <Box sx={{ width: 250 }}>
                 <PlayerSelect
                   label={playerId ? "Filter by opponent" : "Filter by player"}
-                  players={players}
+                  players={filteredPlayers}
                   value={selectedPlayerId}
-                  onChange={setSelectedPlayerId}
+                  onChange={(newPlayerId) => {
+                    setSelectedPlayerId(newPlayerId);
+                    // Call the callback if provided
+                    if (onOpponentSelected && newPlayerId) {
+                      const selectedPlayer = filteredPlayers.find(
+                        (p) => p.id === newPlayerId,
+                      );
+                      if (selectedPlayer) {
+                        onOpponentSelected(newPlayerId, selectedPlayer.name);
+                      }
+                    } else if (onOpponentSelected && !newPlayerId) {
+                      // Clear selection
+                      onOpponentSelected("", "");
+                    }
+                  }}
                   onPlayerAdded={() => {}} // Not used since addNewPlayer is false
                   addNewPlayer={false}
                 />
