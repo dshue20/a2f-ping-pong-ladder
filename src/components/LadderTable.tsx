@@ -1,4 +1,4 @@
-import { Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Paper, Snackbar, Stack, Typography } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -17,6 +17,8 @@ export default function LadderTableMUI() {
   const [players, setPlayers] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [addGameOpen, setAddGameOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   const columns: GridColDef<Row>[] = [
     {
@@ -229,8 +231,39 @@ export default function LadderTableMUI() {
         onClose={() => setAddGameOpen(false)}
         players={players}
         onSubmit={async (playerAId, playerBId, scoreA, scoreB) => {
-          await submitMatch({ playerAId, playerBId, scoreA, scoreB });
+          const result = await submitMatch({
+            playerAId,
+            playerBId,
+            scoreA,
+            scoreB,
+          });
           fetchPlayers(); // refresh ladder after new game
+
+          // Show notification with rating change
+          if (result) {
+            setNotificationMessage(
+              `${result.winnerName} gained ${result.ratingChange} points by defeating ${result.loserName}!`,
+            );
+            setNotificationOpen(true);
+          }
+        }}
+      />
+
+      <Snackbar
+        open={notificationOpen}
+        autoHideDuration={4000}
+        onClose={() => setNotificationOpen(false)}
+        message={notificationMessage}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{
+          mb: 3, // Margin bottom for padding from edge
+          "& .MuiSnackbarContent-root": {
+            backgroundColor: "#323232", // Dark background
+            color: "#fff", // White text
+            fontSize: "1rem",
+            fontWeight: 500,
+            borderRadius: "12px", // Rounded corners
+          },
         }}
       />
     </Box>

@@ -66,7 +66,7 @@ export async function submitMatch({
   const loserId = winnerId === playerAId ? playerBId : playerAId;
 
   // Calculate new Elo ratings using the external formula
-  const { newWinnerRating, newLoserRating } =
+  const { newWinnerRating, newLoserRating, ratingChange } =
     winnerId === playerAId
       ? calculateEloMargin(
           playerA.rating,
@@ -137,4 +137,11 @@ export async function submitMatch({
 
   // Commit all updates
   await batch.commit();
+
+  // Return match result for notification
+  return {
+    winnerName: winnerId === playerAId ? playerA.name : playerB.name,
+    loserName: loserId === playerAId ? playerA.name : playerB.name,
+    ratingChange: Math.round(ratingChange),
+  };
 }
